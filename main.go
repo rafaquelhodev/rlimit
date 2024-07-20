@@ -144,12 +144,12 @@ func handleConnection(c net.Conn, tm *TokenBucketManager) {
 
 			maxToken, err := strconv.ParseInt(options[1], 10, 64)
 			if err != nil {
-				resp = "INVALID: maxTokens should be an integer"
+				resp = fmt.Sprintf("%s: INVALID ERROR: maxTokens should be an integer\n", reqID)
 			}
 
 			refillRate, err := strconv.ParseInt(options[2], 10, 64)
 			if err != nil {
-				resp = "INVALID: refillRate should be an integer"
+				resp = fmt.Sprintf("%s: INVALID ERROR: refillRate should be an integer\n", reqID)
 			}
 
 			if resp == "" {
@@ -157,7 +157,7 @@ func handleConnection(c net.Conn, tm *TokenBucketManager) {
 
 				bucket.waitAvailable()
 
-				resp = "AVAILABLE\n"
+				resp = fmt.Sprintf("%s: AVAILABLE\n", reqID)
 			}
 
 		}

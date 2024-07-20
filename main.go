@@ -31,31 +31,34 @@ func handleConnection(c net.Conn, tm *tokens.TokenBucketManager) {
 
 		options := strings.Split(temp, " ")
 
-		resp := ""
-		if len(options) < 3 {
-			resp = "INVALID: reqID maxTokens refillRate are required\n"
-		} else {
-			reqID := options[0]
+		go func() {
+			resp := ""
+			if len(options) < 3 {
+				resp = "INVALID: reqID maxTokens refillRate are required\n"
+			} else {
+				reqID := options[0]
 
-			maxToken, err := strconv.ParseInt(options[1], 10, 64)
-			if err != nil {
-				resp = fmt.Sprintf("%s: INVALID ERROR: maxTokens should be an integer\n", reqID)
+				maxToken, err := strconv.ParseInt(options[1], 10, 64)
+				if err != nil {
+					resp = fmt.Sprintf("%s: INVALID ERROR: maxTokens should be an integer\n", reqID)
+				}
+
+				refillRate, err := strconv.ParseInt(options[2], 10, 64)
+				if err != nil {
+					resp = fmt.Sprintf("%s: INVALID ERROR: refillRate should be an integer\n", reqID)
+				}
+
+				if resp == "" {
+					tm.WaitAvailable(reqID, maxToken, refillRate)
+
+					resp = fmt.Sprintf("%s: AVAILABLE\n", reqID)
+				}
+
 			}
 
-			refillRate, err := strconv.ParseInt(options[2], 10, 64)
-			if err != nil {
-				resp = fmt.Sprintf("%s: INVALID ERROR: refillRate should be an integer\n", reqID)
-			}
+			c.Write([]byte(string(resp)))
+		}()
 
-			if resp == "" {
-				tm.WaitAvailable(reqID, maxToken, refillRate)
-
-				resp = fmt.Sprintf("%s: AVAILABLE\n", reqID)
-			}
-
-		}
-
-		c.Write([]byte(string(resp)))
 	}
 	c.Close()
 }

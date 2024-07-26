@@ -19,7 +19,9 @@ func TestWaitAvailableShouldCreateNewBucket(t *testing.T) {
 		t.Fatalf(`Initialized tokenBuckets must be empty, got: %+v`, tbm.tokenBuckets)
 	}
 
-	tbm.WaitAvailable("test", 1, 1)
+	tbm.CreateTokenBucket("test", 1, 1)
+
+	tbm.WaitAvailable("test")
 
 	if len(tbm.tokenBuckets) != 1 {
 		t.Fatalf(`TokenBuckets must contain one bucket, got: %d`, len(tbm.tokenBuckets))
@@ -31,7 +33,9 @@ func TestIsOnlyAvailableAfterTheTokenIsRefilled(t *testing.T) {
 
 	start := time.Now()
 
-	tbm.WaitAvailable("test", 1, 300)
+	tbm.CreateTokenBucket("test", 1, 300)
+
+	tbm.WaitAvailable("test")
 
 	elapsed := time.Since(start)
 
@@ -43,12 +47,14 @@ func TestIsOnlyAvailableAfterTheTokenIsRefilled(t *testing.T) {
 func TestDoesNotNeedToWaitWhenTokenIsAvailable(t *testing.T) {
 	tbm := NewUserTokenBucketManager()
 
-	bucket := tbm.getTokenBucket("test", 1, 3000)
+	tbm.CreateTokenBucket("test", 1, 3000)
+
+	bucket := tbm.GetTokenBucket("test")
 	bucket.tokens += 1
 
 	start := time.Now()
 
-	tbm.WaitAvailable("test", 1, 3000)
+	tbm.WaitAvailable("test")
 
 	elapsed := time.Since(start)
 

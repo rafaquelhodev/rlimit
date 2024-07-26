@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -10,6 +11,52 @@ import (
 
 	"github.com/rafaquelhodev/rlimit/internal/tokens"
 )
+
+type ExecType map[string](func(tm *tokens.TokenBucketManager, options []string) (string, error))
+
+func executeRequest(tm *tokens.TokenBucketManager, options []string) (string, error) {
+	if len(options) == 0 {
+		return "", errors.New("please provide options")
+	}
+
+	switch options[0] {
+	case "INIT":
+		if len(options) < 4 {
+			return "", errors.New("reqID maxToken refillRate required")
+		}
+
+		reqID := options[1]
+
+		maxToken, err := strconv.ParseInt(options[2], 10, 64)
+		if err != nil {
+			return "", fmt.Errorf("maxTokens should be an integer")
+		}
+
+		refillRate, err := strconv.ParseInt(options[3], 10, 64)
+		if err != nil {
+			return "", fmt.Errorf("refillRate should be an integer")
+		}
+
+		tm.CreateTokenBucket(reqID, maxToken, refillRate)
+
+		return fmt.Sprintf("%s: DONE", reqID), nil
+	case "CHECK":
+		if len(options) < 2 {
+			return "", errors.New("reqID is required")
+		}
+
+		reqID := options[1]
+
+		err := tm.WaitAvailable(reqID)
+		if err != nil {
+			return "", err
+		}
+
+		return fmt.Sprintf("%s: AVAILABLE", reqID), nil
+	default:
+		return "", errors.New("please provide a valid option")
+	}
+}
 
 func handleConnection(c net.Conn, tm *tokens.TokenBucketManager) {
 	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
@@ -29,34 +76,15 @@ func handleConnection(c net.Conn, tm *tokens.TokenBucketManager) {
 
 		fmt.Printf("Received %s from %s\n", temp, c.RemoteAddr().String())
 
-		options := strings.Split(temp, " ")
-
 		go func() {
-			resp := ""
-			if len(options) < 3 {
-				resp = "INVALID: reqID maxTokens refillRate are required\n"
+			options := strings.Split(temp, " ")
+			resp, err := executeRequest(tm, options)
+
+			if err != nil {
+				c.Write([]byte(string("ERROR: " + err.Error() + "\n")))
 			} else {
-				reqID := options[0]
-
-				maxToken, err := strconv.ParseInt(options[1], 10, 64)
-				if err != nil {
-					resp = fmt.Sprintf("%s: INVALID ERROR: maxTokens should be an integer\n", reqID)
-				}
-
-				refillRate, err := strconv.ParseInt(options[2], 10, 64)
-				if err != nil {
-					resp = fmt.Sprintf("%s: INVALID ERROR: refillRate should be an integer\n", reqID)
-				}
-
-				if resp == "" {
-					tm.WaitAvailable(reqID, maxToken, refillRate)
-
-					resp = fmt.Sprintf("%s: AVAILABLE\n", reqID)
-				}
-
+				c.Write([]byte(string(resp + "\n")))
 			}
-
-			c.Write([]byte(string(resp)))
 		}()
 
 	}

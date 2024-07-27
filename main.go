@@ -21,33 +21,35 @@ func executeRequest(tm *tokens.TokenBucketManager, options []string) (string, er
 
 	switch options[0] {
 	case "INIT":
-		if len(options) < 4 {
-			return "", errors.New("reqID maxToken refillRate required")
+		if len(options) < 5 {
+			return "", errors.New("reqID bucketID maxToken refillRate required")
 		}
 
 		reqID := options[1]
+		bucketID := options[2]
 
-		maxToken, err := strconv.ParseInt(options[2], 10, 64)
+		maxToken, err := strconv.ParseInt(options[3], 10, 64)
 		if err != nil {
 			return "", fmt.Errorf("maxTokens should be an integer")
 		}
 
-		refillRate, err := strconv.ParseInt(options[3], 10, 64)
+		refillRate, err := strconv.ParseInt(options[4], 10, 64)
 		if err != nil {
 			return "", fmt.Errorf("refillRate should be an integer")
 		}
 
-		tm.CreateTokenBucket(reqID, maxToken, refillRate)
+		tm.CreateTokenBucket(bucketID, maxToken, refillRate)
 
 		return fmt.Sprintf("%s: DONE", reqID), nil
 	case "CHECK":
 		if len(options) < 2 {
-			return "", errors.New("reqID is required")
+			return "", errors.New("reqID bucketID are required")
 		}
 
 		reqID := options[1]
+		bucketID := options[2]
 
-		err := tm.WaitAvailable(reqID)
+		err := tm.WaitAvailable(bucketID)
 		if err != nil {
 			return "", err
 		}

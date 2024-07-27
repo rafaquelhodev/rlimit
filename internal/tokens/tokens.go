@@ -95,34 +95,34 @@ func NewUserTokenBucketManager() *TokenBucketManager {
 	return &TokenBucketManager{tokenBuckets: make(map[string]*TokenBucket)}
 }
 
-func (tm *TokenBucketManager) CreateTokenBucket(reqID string, maxTokens int64, refillRate int64) *TokenBucket {
+func (tm *TokenBucketManager) CreateTokenBucket(bucketID string, maxTokens int64, refillRate int64) *TokenBucket {
 	tm.mutex.Lock()
 	defer tm.mutex.Unlock()
 
-	if bucket, ok := tm.tokenBuckets[reqID]; ok {
+	if bucket, ok := tm.tokenBuckets[bucketID]; ok {
 		return bucket
 	}
 
-	bucket := newTokenBucket(reqID, maxTokens, refillRate)
-	tm.tokenBuckets[reqID] = bucket
+	bucket := newTokenBucket(bucketID, maxTokens, refillRate)
+	tm.tokenBuckets[bucketID] = bucket
 	return bucket
 }
 
-func (tm *TokenBucketManager) GetTokenBucket(reqID string) *TokenBucket {
+func (tm *TokenBucketManager) GetTokenBucket(bucketID string) *TokenBucket {
 	tm.mutex.Lock()
 	defer tm.mutex.Unlock()
 
-	if bucket, ok := tm.tokenBuckets[reqID]; ok {
+	if bucket, ok := tm.tokenBuckets[bucketID]; ok {
 		return bucket
 	}
 
 	return nil
 }
 
-func (tm *TokenBucketManager) WaitAvailable(reqID string) error {
-	bucket := tm.GetTokenBucket(reqID)
+func (tm *TokenBucketManager) WaitAvailable(bucketID string) error {
+	bucket := tm.GetTokenBucket(bucketID)
 	if bucket == nil {
-		return fmt.Errorf("bucket %s not found", reqID)
+		return fmt.Errorf("bucket %s not found", bucketID)
 	}
 
 	bucket.waitAvailable()

@@ -15,39 +15,43 @@ import (
 type ExecType map[string](func(tm *tokens.TokenBucketManager, options []string) (string, error))
 
 func executeRequest(tm *tokens.TokenBucketManager, options []string) (string, error) {
-	if len(options) == 0 {
-		return "", errors.New("please provide options")
+	if len(options) < 2 {
+		return "", errors.New("please provide valid options")
 	}
 
 	switch options[0] {
 	case "INIT":
-		if len(options) < 4 {
-			return "", errors.New("reqID maxToken refillRate required")
-		}
-
 		reqID := options[1]
 
-		maxToken, err := strconv.ParseInt(options[2], 10, 64)
-		if err != nil {
-			return "", fmt.Errorf("maxTokens should be an integer")
+		if len(options) < 5 {
+			return "", fmt.Errorf("%s: ERROR - reqID bucketID maxToken refillRate required", reqID)
 		}
 
-		refillRate, err := strconv.ParseInt(options[3], 10, 64)
+		bucketID := options[2]
+
+		maxToken, err := strconv.ParseInt(options[3], 10, 64)
 		if err != nil {
-			return "", fmt.Errorf("refillRate should be an integer")
+			return "", fmt.Errorf("%s: ERROR - maxTokens should be an integer", reqID)
 		}
 
-		tm.CreateTokenBucket(reqID, maxToken, refillRate)
+		refillRate, err := strconv.ParseInt(options[4], 10, 64)
+		if err != nil {
+			return "", fmt.Errorf("%s: ERROR - refillRate should be an integer", reqID)
+		}
+
+		tm.CreateTokenBucket(bucketID, maxToken, refillRate)
 
 		return fmt.Sprintf("%s: DONE", reqID), nil
 	case "CHECK":
-		if len(options) < 2 {
-			return "", errors.New("reqID is required")
-		}
-
 		reqID := options[1]
 
-		err := tm.WaitAvailable(reqID)
+		if len(options) < 2 {
+			return "", fmt.Errorf("%s: ERROR - reqID bucketID are required", reqID)
+		}
+
+		bucketID := options[2]
+
+		err := tm.WaitAvailable(bucketID)
 		if err != nil {
 			return "", err
 		}
@@ -81,7 +85,7 @@ func handleConnection(c net.Conn, tm *tokens.TokenBucketManager) {
 			resp, err := executeRequest(tm, options)
 
 			if err != nil {
-				c.Write([]byte(string("ERROR: " + err.Error() + "\n")))
+				c.Write([]byte(string(err.Error() + "\n")))
 			} else {
 				c.Write([]byte(string(resp + "\n")))
 			}
